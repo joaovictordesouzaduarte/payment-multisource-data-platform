@@ -1,0 +1,15 @@
+# Official Terraform CLI — no local Terraform or AWS CLI install required.
+# Pin version for reproducible applies across machines/CI.
+# Compose overrides ENTRYPOINT for an interactive workspace (see docker-compose.terraform.yml).
+FROM hashicorp/terraform:1.15.8
+
+# Alpine package: AWS CLI for put-user-policy / start-crawler inside the workspace.
+RUN apk add --no-cache aws-cli
+
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+WORKDIR /workspace
+
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+CMD ["terraform", "version"]

@@ -1,0 +1,11 @@
+# Example local overrides — copy to terraform.tfvars (do not commit secrets).
+#
+# aws_region               = "us-east-1"
+# project_name             = "rtmsp"
+# environment              = "dev"
+# kinesis_retention_hours  = 24
+# firehose_buffer_size_mb  = 64
+# firehose_buffer_interval_seconds = 60
+# alarm_email              = "you@example.com"
+# enable_alarms            = true    # false skips SNS topic + CloudWatch alarms
+# glue_crawler_schedule    = ""      # e.g. cron(0 * * * ? *); empty = on-demand

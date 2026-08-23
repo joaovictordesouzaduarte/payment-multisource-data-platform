@@ -1,0 +1,32 @@
+# Interactive Terraform workspace — review plan before apply.
+#
+#   ./infra/tf.sh up
+#   ./infra/tf.sh shell
+#   ./infra/tf.sh down
+#
+# Or raw Compose:
+#   docker compose -f infra/docker-compose.terraform.yml up -d --build
+#   docker compose -f infra/docker-compose.terraform.yml exec terraform sh
+
+services:
+  terraform:
+    build:
+      context: .
+      dockerfile: Dockerfile.terraform
+    image: rtmsp-terraform:1.15.8
+    working_dir: /workspace
+    # Keep image ENTRYPOINT (writes ~/.aws from env, then execs the command)
+    command: ["sleep", "infinity"]
+    env_file:
+      - ../.env
+    volumes:
+      # Mount Terraform root (state, .terraform, and tfplan stay on the host)
+      - ./terraform:/workspace
+      - ../docs/iam-deploy-policy.json:/docs/iam-deploy-policy.json:ro
+    environment:
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-${AWS_REGION:-us-east-1}}
+      TF_IN_AUTOMATION: "true"
+      TF_INPUT: "false"
+    stdin_open: true
+    tty: true
