@@ -1,0 +1,34 @@
+"""SDP bronze view: preserve the Firehose JSON landing without coercion."""
+
+from pyspark import pipelines as dp
+from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql.functions import input_file_name
+from pyspark.sql.types import DoubleType, StringType, StructField, StructType
+
+spark = SparkSession.active()
+BRONZE_PATH = "${bronze_path}"
+
+PAYMENTS_SCHEMA = StructType(
+    [
+        StructField("event_id", StringType(), True),
+        StructField("merchant_id", StringType(), True),
+        StructField("user_id", StringType(), True),
+        StructField("amount_usd", DoubleType(), True),
+        StructField("currency", StringType(), True),
+        StructField("status", StringType(), True),
+        StructField("event_timestamp", StringType(), True),
+    ]
+)
+
+
+dp.create_streaming_table("bronze_payments", comment="Raw payment events as landed by Firehose")
+
+@dp.append_flow(target="bronze_payments")
+def ingest_bronze() -> DataFrame:
+    return (
+        spark.readStream.format("json")
+        .schema(PAYMENTS_SCHEMA)
+        .option("recursiveFileLookup", "true")
+        .load(BRONZE_PATH)
+        .select("*", input_file_name().alias("source_file"))
+    )

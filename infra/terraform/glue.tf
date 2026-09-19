@@ -9,8 +9,9 @@ locals {
 }
 
 resource "aws_glue_catalog_database" "payments" {
-  name        = local.glue_database_name
-  description = "Payments lake catalog. Bronze crawler writes bronze_raw from Firehose NDJSON."
+  name         = local.glue_database_name
+  description  = "Payments lake catalog. Bronze crawler writes bronze_raw from Firehose NDJSON."
+  location_uri = "s3://${local.payments_silver_bucket.bucket}/iceberg-warehouse/"
 }
 
 data "aws_iam_policy_document" "glue_crawler_assume" {
@@ -134,6 +135,7 @@ data "aws_iam_policy_document" "glue_crawler" {
     actions = [
       "s3:GetObject",
       "s3:PutObject",
+      "s3:DeleteObject",
       "s3:AbortMultipartUpload",
       "s3:ListBucketMultipartUploads",
     ]

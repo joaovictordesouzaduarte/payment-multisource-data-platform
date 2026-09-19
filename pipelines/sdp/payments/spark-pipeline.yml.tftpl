@@ -1,0 +1,12 @@
+name: ${pipeline_name}
+catalog: ${catalog}
+database: ${database}
+storage: s3://${bucket}/glue/pipelines/payments/state/
+libraries:
+  - glob:
+      include: transformations/**
+configuration:
+  spark.sql.catalog.${catalog}: org.apache.iceberg.spark.SparkCatalog
+  spark.sql.catalog.${catalog}.catalog-impl: org.apache.iceberg.aws.glue.GlueCatalog
+  spark.sql.catalog.${catalog}.io-impl: org.apache.iceberg.aws.s3.S3FileIO
+  spark.sql.catalog.${catalog}.warehouse: s3://${bucket}/iceberg-warehouse

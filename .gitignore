@@ -21,3 +21,5 @@ build/
 infra/terraform/*.tfvars
 !infra/terraform/terraform.tfvars.example
 infra/terraform/build/
+data/*
+

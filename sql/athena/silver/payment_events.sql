@@ -1,9 +1,11 @@
--- Silver conformed payment events (Parquet, event-time partitions).
--- Source of truth is payments_lake.to_silver; Glue writes this prefix.
+-- Silver Iceberg payment events (event-time identity partitions).
+-- Glue bronze→silver registers this table; run this only if it is missing.
+-- If a Hive/Parquet table already exists at this name, drop it first:
+--   DROP TABLE rtmsp_dev_payments.payment_events;
 --
 -- Substitute payments_silver_bucket from Terraform output.
 
-CREATE EXTERNAL TABLE IF NOT EXISTS rtmsp_dev_payments.payment_events (
+CREATE TABLE IF NOT EXISTS rtmsp_dev_payments.payment_events (
   event_id string,
   merchant_id string,
   user_id string,
@@ -26,24 +28,15 @@ CREATE EXTERNAL TABLE IF NOT EXISTS rtmsp_dev_payments.payment_events (
   ingest_month string,
   ingest_day string,
   ingest_hour string,
-  ingest_lag_hours int
-)
-PARTITIONED BY (
+  ingest_lag_hours int,
   year string,
   month string,
   day string
 )
-STORED AS PARQUET
+PARTITIONED BY (year, month, day)
 LOCATION 's3://${payments_silver_bucket}/payments/payment_events/'
 TBLPROPERTIES (
-  'projection.enabled' = 'true',
-  'projection.year.type' = 'integer',
-  'projection.year.range' = '2026,2030',
-  'projection.month.type' = 'integer',
-  'projection.month.range' = '1,12',
-  'projection.month.digits' = '2',
-  'projection.day.type' = 'integer',
-  'projection.day.range' = '1,31',
-  'projection.day.digits' = '2',
-  'storage.location.template' = 's3://${payments_silver_bucket}/payments/payment_events/year=${year}/month=${month}/day=${day}/'
+  'table_type' = 'ICEBERG',
+  'format' = 'parquet'
+  --'format-version' = '2'
 );

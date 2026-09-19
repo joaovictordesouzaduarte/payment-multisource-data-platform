@@ -1,8 +1,11 @@
--- Silver quarantine: bronze rows that failed quality gates.
+-- Silver Iceberg quarantine: bronze rows that failed quality gates.
+-- Glue bronze→silver registers this table; run this only if it is missing.
+-- If a Hive/JSON table already exists at this name, drop it first:
+--   DROP TABLE rtmsp_dev_payments.payment_events_rejected;
 --
 -- Substitute payments_silver_bucket from Terraform output.
 
-CREATE EXTERNAL TABLE IF NOT EXISTS rtmsp_dev_payments.payment_events_rejected (
+CREATE TABLE IF NOT EXISTS rtmsp_dev_payments.payment_events_rejected (
   event_id string,
   merchant_id string,
   user_id string,
@@ -14,11 +17,9 @@ CREATE EXTERNAL TABLE IF NOT EXISTS rtmsp_dev_payments.payment_events_rejected (
   ingest_source string,
   rejection_reason string
 )
-ROW FORMAT SERDE 'org.openx.data.jsonserde.JsonSerDe'
-WITH SERDEPROPERTIES (
-  'ignore.malformed.json' = 'true'
-)
 LOCATION 's3://${payments_silver_bucket}/payments/payment_events_rejected/'
 TBLPROPERTIES (
-  'classification' = 'json'
+  'table_type' = 'ICEBERG',
+  'format' = 'parquet',
+  'format-version' = '2'
 );

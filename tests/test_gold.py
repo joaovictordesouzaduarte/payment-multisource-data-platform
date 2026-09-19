@@ -1,8 +1,9 @@
-"""Unit tests for silver → gold marts."""
+"""Unit tests for silver → gold star schema."""
 
+from datetime import date
 from decimal import Decimal
 
-from payments_lake.gold import to_gold
+from payments_lake.gold import DATE_END, DATE_START, dim_date, to_gold
 from payments_lake.silver import to_silver
 
 
@@ -68,39 +69,68 @@ SAMPLE = [
 ]
 
 
-def test_merchant_daily_from_sample_events():
+def _star():
     silver, rejected = to_silver(SAMPLE)
     assert rejected == []
-    merchant, _status = to_gold(silver)
-    by_merchant = {row["merchant_id"]: row for row in merchant}
-
-    m13 = by_merchant["mrc_0013"]
-    assert m13["txn_count"] == 2
-    assert m13["unique_users"] == 2
-    assert m13["captured_count"] == 2
-    assert m13["gmv_usd"] == Decimal("63.25")
-    assert m13["aov_usd"] == Decimal("31.63")
-    assert m13["capture_rate"] == Decimal("1.000000")
-    assert m13["failure_rate"] == Decimal("0.000000")
-
-    m18 = by_merchant["mrc_0018"]
-    assert m18["gmv_usd"] == Decimal("0.00")
-    assert m18["failed_count"] == 1
-    assert m18["failed_usd"] == Decimal("11.21")
-    assert m18["aov_usd"] is None
-    assert m18["failure_rate"] == Decimal("1.000000")
-
-    m25 = by_merchant["mrc_0025"]
-    assert m25["large_ticket_count"] == 1
-    assert m25["gmv_usd"] == Decimal("243.84")
+    return to_gold(silver)
 
 
-def test_status_daily_mix():
-    silver, _ = to_silver(SAMPLE)
-    _merchant, status = to_gold(silver)
-    by_status = {row["status"]: row for row in status}
-    assert by_status["captured"]["txn_count"] == 3
-    assert by_status["captured"]["amount_usd"] == Decimal("307.09")
-    assert by_status["captured"]["unique_merchants"] == 2
-    assert by_status["failed"]["txn_count"] == 1
-    assert by_status["authorized"]["txn_count"] == 1
+def test_fact_grain_and_revenue_flag():
+    gold = _star()
+    facts = gold["fact_payment"]
+    assert len(facts) == 5
+    assert len({row["event_id"] for row in facts}) == 5
+    by_id = {row["event_id"]: row for row in facts}
+
+    captured = by_id["5ef2c2fa-d3fc-4326-9a2d-ad1a0e2689a4"]
+    assert captured["date_key"] == 20260823
+    assert captured["merchant_id"] == "mrc_0013"
+    assert captured["amount_usd"] == Decimal("22.70")
+    assert captured["amount_cents"] == 2270
+    assert captured["is_revenue"] is True
+    assert captured["amount_band"] == "small"
+
+    failed = by_id["f580f5d7-60d6-49d5-b574-ec18a357d17a"]
+    assert failed["is_revenue"] is False
+    assert failed["status"] == "failed"
+
+    large = by_id["0bccd7d1-5ed0-4546-a1df-7a5a671bc4af"]
+    assert large["amount_band"] == "large"
+    assert large["is_revenue"] is True
+
+
+def test_fact_foreign_keys_exist_in_dims():
+    gold = _star()
+    facts = gold["fact_payment"]
+    date_keys = {row["date_key"] for row in gold["dim_date"]}
+    merchants = {row["merchant_id"] for row in gold["dim_merchant"]}
+    users = {row["user_id"] for row in gold["dim_user"]}
+    statuses = {row["status"] for row in gold["dim_status"]}
+
+    assert {row["date_key"] for row in facts} <= date_keys
+    assert {row["merchant_id"] for row in facts} <= merchants
+    assert {row["user_id"] for row in facts} <= users
+    assert {row["status"] for row in facts} <= statuses
+    assert merchants == {"mrc_0006", "mrc_0013", "mrc_0018", "mrc_0025"}
+    assert len(gold["dim_user"]) == 5
+
+
+def test_dim_status_revenue_only_for_captured():
+    gold = _star()
+    by_status = {row["status"]: row for row in gold["dim_status"]}
+    assert set(by_status) == {"authorized", "captured", "failed", "refunded"}
+    assert by_status["captured"]["is_revenue"] is True
+    assert by_status["failed"]["is_revenue"] is False
+    assert by_status["authorized"]["is_revenue"] is False
+    assert by_status["refunded"]["is_revenue"] is False
+
+
+def test_dim_date_calendar_range_and_weekend():
+    rows = dim_date()
+    assert rows[0]["full_date"] == DATE_START
+    assert rows[-1]["full_date"] == DATE_END
+    assert rows[0]["date_key"] == 20260101
+    sunday = next(row for row in rows if row["full_date"] == date(2026, 8, 23))
+    assert sunday["day_of_week"] == "Sunday"
+    assert sunday["is_weekend"] is True
+    assert sunday["month_name"] == "August"

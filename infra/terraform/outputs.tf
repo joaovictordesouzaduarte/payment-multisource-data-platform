@@ -9,12 +9,12 @@ output "payments_bronze_bucket" {
 }
 
 output "payments_silver_bucket" {
-  description = "S3 silver bucket — cleansed / conformed payments (Glue)."
+  description = "S3 silver bucket — Iceberg payment_events and quarantine."
   value       = local.payments_silver_bucket.bucket
 }
 
 output "payments_gold_bucket" {
-  description = "S3 gold bucket — business-ready payments marts (Athena)."
+  description = "S3 gold bucket — Iceberg star (fact_payment + dimensions)."
   value       = local.payments_gold_bucket.bucket
 }
 
@@ -71,21 +71,17 @@ output "glue_crawler_name" {
 }
 
 output "glue_crawler_role_arn" {
-  description = "IAM role assumed by the bronze Glue crawler and batch ETL jobs."
+  description = "IAM role assumed by the bronze Glue crawler and the SDP job."
   value       = aws_iam_role.glue_crawler.arn
 }
 
-output "glue_bronze_to_silver_job" {
-  description = "Glue job that writes typed silver payment_events and a rejected quarantine."
-  value       = aws_glue_job.bronze_to_silver.name
-}
-
-output "glue_silver_to_gold_job" {
-  description = "Glue job that writes merchant_daily_metrics and payment_status_daily."
-  value       = aws_glue_job.silver_to_gold.name
+output "glue_payments_sdp_job" {
+  description = "Glue 6.0 Spark Declarative Pipeline job (bronze → silver Iceberg)."
+  value       = aws_glue_job.payments_sdp.name
 }
 
 output "athena_workgroup" {
   description = "Athena workgroup for payments lake queries (results land on gold)."
   value       = aws_athena_workgroup.payments.name
 }
+
