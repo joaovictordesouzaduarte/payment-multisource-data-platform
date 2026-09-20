@@ -213,7 +213,21 @@
         "glue:StartJobRun",
         "glue:GetJobRun",
         "glue:GetJobRuns",
-        "glue:BatchStopJobRun"
+        "glue:BatchStopJobRun",
+        "glue:CreateRegistry",
+        "glue:DeleteRegistry",
+        "glue:GetRegistry",
+        "glue:ListRegistries",
+        "glue:UpdateRegistry",
+        "glue:CreateSchema",
+        "glue:DeleteSchema",
+        "glue:GetSchema",
+        "glue:GetSchemaByDefinition",
+        "glue:GetSchemaVersion",
+        "glue:ListSchemas",
+        "glue:ListSchemaVersions",
+        "glue:RegisterSchemaVersion",
+        "glue:UpdateSchema"
       ],
       "Resource": "*"
     },
@@ -228,7 +242,12 @@
         "athena:ListWorkGroups",
         "athena:TagResource",
         "athena:UntagResource",
-        "athena:ListTagsForResource"
+        "athena:ListTagsForResource",
+        "athena:StartQueryExecution",
+        "athena:ListDataCatalogs",
+        "athena:ListDatabases",
+        "athena:GetTableMetadata",
+        "athena:ListTableMetadata"
       ],
       "Resource": "*"
     }

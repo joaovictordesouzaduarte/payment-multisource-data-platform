@@ -80,6 +80,16 @@ output "glue_payments_sdp_job" {
   value       = aws_glue_job.payments_sdp.name
 }
 
+output "glue_schema_registry" {
+  description = "Glue Schema Registry name used by bronze to load the payment event contract."
+  value       = aws_glue_registry.registry.registry_name
+}
+
+output "glue_events_schema" {
+  description = "Glue schema name (JSON) for payment events."
+  value       = aws_glue_schema.events.schema_name
+}
+
 output "athena_workgroup" {
   description = "Athena workgroup for payments lake queries (results land on gold)."
   value       = aws_athena_workgroup.payments.name

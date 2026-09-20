@@ -8,6 +8,7 @@ import random
 import sys
 import time
 from datetime import datetime, timezone
+from typing import TypeVar
 from uuid import uuid4
 
 from payments_gateway.config import Settings
@@ -15,6 +16,8 @@ from payments_gateway.models import PaymentEvent, PaymentStatus
 from payments_gateway.producer import PaymentEventProducer
 
 logger = logging.getLogger(__name__)
+
+T = TypeVar("T")
 
 MERCHANT_IDS = [f"mrc_{i:04d}" for i in range(1, 51)]
 USER_IDS = [f"usr_{i:06d}" for i in range(1, 501)]
@@ -24,31 +27,56 @@ STATUS_WEIGHTS = [
     (PaymentStatus.FAILED, 0.10),
     (PaymentStatus.REFUNDED, 0.02),
 ]
+CURRENCY_WEIGHTS = [
+    ("USD", 0.50),
+    ("EUR", 0.18),
+    ("BRL", 0.12),
+    ("GBP", 0.08),
+    ("JPY", 0.05),
+    ("CAD", 0.04),
+    ("MXN", 0.03),
+]
+EXTRA_FIELDS = {
+    "payment_method": lambda: random.choice(["card", "pix", "wallet", "bank_transfer"]),
+    "country": lambda: random.choice(["US", "BR", "GB", "DE", "JP", "MX", "CA"]),
+    "channel": lambda: random.choice(["web", "ios", "android", "pos"]),
+    "card_brand": lambda: random.choice(["visa", "mastercard", "amex"]),
+    "fx_rate": lambda: round(random.uniform(0.5, 6.0), 4),
+}
 
 
-def _weighted_status() -> PaymentStatus:
+def _weighted_choice(choices: list[tuple[T, float]]) -> T:
     roll = random.random()
     cumulative = 0.0
-    for status, weight in STATUS_WEIGHTS:
+    for value, weight in choices:
         cumulative += weight
         if roll <= cumulative:
-            return status
-    return PaymentStatus.CAPTURED
+            return value
+    return choices[-1][0]
+
+
+def _optional_extra_fields() -> dict[str, str | float]:
+    if random.random() >= 0.4:
+        return {}
+    keys = random.sample(list(EXTRA_FIELDS), k=random.randint(1, 3))
+    return {key: EXTRA_FIELDS[key]() for key in keys}
 
 
 def generate_event() -> PaymentEvent:
     amount = round(random.lognormvariate(mu=3.5, sigma=0.8), 2)
     amount = max(0.50, min(amount, 5000.0))
+    extras = _optional_extra_fields()
     return PaymentEvent(
         event_id=str(uuid4()),
         merchant_id=random.choice(MERCHANT_IDS),
         user_id=random.choice(USER_IDS),
         amount_usd=amount,
-        currency="USD",
-        status=_weighted_status(),
+        currency=_weighted_choice(CURRENCY_WEIGHTS),
+        status=_weighted_choice(STATUS_WEIGHTS),
         event_timestamp=datetime.now(timezone.utc),
-        schema_version=1,
+        schema_version=2 if extras else 1,
         ingest_source="payment_gateway",
+        **extras,
     )
 
 

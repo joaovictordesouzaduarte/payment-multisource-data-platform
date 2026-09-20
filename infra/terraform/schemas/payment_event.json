@@ -1,0 +1,16 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "PaymentEvent",
+    "type": "object",
+    "properties": {
+      "event_id": { "type": "string" },
+      "merchant_id": { "type": "string" },
+      "user_id": { "type": "string" },
+      "amount_usd": { "type": "number" },
+      "currency": { "type": "string" },
+      "status": { "type": "string" },
+      "event_timestamp": { "type": "string" },
+      "source_file": { "type": "string" },
+      "country": { "type": "string" }
+    }
+}

@@ -88,6 +88,13 @@ data "aws_iam_policy_document" "glue_crawler" {
       "glue:GetJobRun",
       "glue:GetJobRuns",
       "glue:BatchStopJobRun",
+      "glue:GetRegistry",
+      "glue:ListRegistries",
+      "glue:GetSchema",
+      "glue:GetSchemaByDefinition",
+      "glue:GetSchemaVersion",
+      "glue:ListSchemas",
+      "glue:ListSchemaVersions",
     ]
     resources = ["*"]
   }

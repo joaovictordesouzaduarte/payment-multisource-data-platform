@@ -68,6 +68,16 @@ aws iam put-user-policy \
 
 If you cannot grant SNS/CloudWatch alarm permissions, set `enable_alarms = false` in `infra/terraform/terraform.tfvars`.
 
+### Local AWS debugging
+
+Any AWS CLI debug from a local machine goes through the Terraform workspace container (`rtmsp-terraform:1.15.8`). Do not rely on a host-installed AWS CLI. Credentials come from `.env`.
+
+```bash
+./infra/tf.sh up
+./infra/tf.sh shell
+# then e.g. aws s3 ls, aws glue get-job-runs, aws kinesis describe-stream
+```
+
 ## 1. Deploy infrastructure
 
 ```bash

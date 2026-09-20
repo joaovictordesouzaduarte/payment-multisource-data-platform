@@ -7,7 +7,7 @@ from enum import Enum
 from typing import Any
 from uuid import uuid4
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class PaymentStatus(str, Enum):
@@ -19,6 +19,8 @@ class PaymentStatus(str, Enum):
 
 class PaymentEvent(BaseModel):
     """Canonical payment gateway event published to Kinesis."""
+
+    model_config = ConfigDict(extra="allow")
 
     event_id: str = Field(default_factory=lambda: str(uuid4()))
     merchant_id: str

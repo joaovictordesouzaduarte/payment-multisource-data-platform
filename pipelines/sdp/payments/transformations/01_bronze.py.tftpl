@@ -1,27 +1,68 @@
 """SDP bronze view: preserve the Firehose JSON landing without coercion."""
 
+import json
+
+import boto3
 from pyspark import pipelines as dp
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import input_file_name
-from pyspark.sql.types import DoubleType, StringType, StructField, StructType
+from pyspark.sql.types import (
+    BooleanType,
+    DataType,
+    DoubleType,
+    LongType,
+    StringType,
+    StructField,
+    StructType,
+)
 
 spark = SparkSession.active()
 BRONZE_PATH = "${bronze_path}"
+REGISTRY_NAME = "${registry_name}"
+SCHEMA_NAME = "${schema_name}"
+AWS_REGION = "${aws_region}"
 
-PAYMENTS_SCHEMA = StructType(
-    [
-        StructField("event_id", StringType(), True),
-        StructField("merchant_id", StringType(), True),
-        StructField("user_id", StringType(), True),
-        StructField("amount_usd", DoubleType(), True),
-        StructField("currency", StringType(), True),
-        StructField("status", StringType(), True),
-        StructField("event_timestamp", StringType(), True),
-    ]
+_JSON_TO_SPARK: dict[str, DataType] = {
+    "string": StringType(),
+    "number": DoubleType(),
+    "double": DoubleType(),
+    "integer": LongType(),
+    "long": LongType(),
+    "boolean": BooleanType(),
+}
+
+
+def _spark_type(spec: dict | str) -> DataType:
+    type_name = spec.get("type", "string") if isinstance(spec, dict) else spec
+    return _JSON_TO_SPARK.get(type_name, StringType())
+
+
+def _struct_from_json_schema(definition: dict) -> StructType:
+    if "properties" in definition:
+        items = {name: spec for name, spec in definition["properties"].items()}
+    else:
+        items = definition
+    return StructType(
+        [StructField(name, _spark_type(spec), True) for name, spec in items.items()]
+    )
+
+
+def _payments_schema() -> StructType:
+    response = boto3.client("glue", region_name=AWS_REGION).get_schema_version(
+        SchemaId={"RegistryName": REGISTRY_NAME, "SchemaName": SCHEMA_NAME},
+        SchemaVersionNumber={"LatestVersion": True},
+    )
+    return _struct_from_json_schema(json.loads(response["SchemaDefinition"]))
+
+
+PAYMENTS_SCHEMA = _payments_schema()
+
+dp.create_streaming_table(
+    "bronze_payments",
+    comment="Raw payment events as landed by Firehose",
+    table_properties={"write.spark.accept-any-schema": "true"},
 )
 
-
-dp.create_streaming_table("bronze_payments", comment="Raw payment events as landed by Firehose")
 
 @dp.append_flow(target="bronze_payments")
 def ingest_bronze() -> DataFrame:
@@ -29,6 +70,7 @@ def ingest_bronze() -> DataFrame:
         spark.readStream.format("json")
         .schema(PAYMENTS_SCHEMA)
         .option("recursiveFileLookup", "true")
+        .option("mergeSchema", "true")
         .load(BRONZE_PATH)
-        .select("*", input_file_name().alias("source_file"))
+        .withColumn("source_file", input_file_name().cast("string"))
     )

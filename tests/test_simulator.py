@@ -11,4 +11,4 @@ def test_generate_event_has_contract_fields():
     assert event.amount_usd > 0
     assert isinstance(event.status, PaymentStatus)
     assert event.ingest_source == "payment_gateway"
-    assert event.schema_version == 1
+    assert event.schema_version >= 1

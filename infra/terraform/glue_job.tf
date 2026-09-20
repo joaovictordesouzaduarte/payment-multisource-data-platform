@@ -12,7 +12,10 @@ locals {
     bucket        = local.payments_silver_bucket.bucket
   })
   bronze_py = templatefile("${local.pipeline_dir}/transformations/01_bronze.py.tftpl", {
-    bronze_path = "s3://${local.payments_bronze_bucket.bucket}/payments/raw/"
+    bronze_path   = "s3://${local.payments_bronze_bucket.bucket}/payments/raw/"
+    registry_name = aws_glue_registry.registry.registry_name
+    schema_name   = aws_glue_schema.events.schema_name
+    aws_region    = var.aws_region
   })
 }
 

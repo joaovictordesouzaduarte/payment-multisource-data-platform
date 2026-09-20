@@ -65,9 +65,7 @@ def silver_payments() -> DataFrame:
             .alias("amount_band"),
             F.row_number()
             .over(
-                Window.partitionBy("event_id").orderBy(
-                    F.col("event_timestamp").desc()
-                )
+                Window.partitionBy("event_id").orderBy(F.col("event_timestamp").desc())
             )
             .alias("_rank"),
         )
@@ -90,5 +88,6 @@ def silver_payments() -> DataFrame:
             "year",
             "month",
             "day",
+            "country"
         )
     )
