@@ -11,7 +11,7 @@ locals {
 resource "aws_glue_catalog_database" "payments" {
   name         = local.glue_database_name
   description  = "Payments lake catalog. Bronze crawler writes bronze_raw from Firehose NDJSON."
-  location_uri = "s3://${local.payments_silver_bucket.bucket}/iceberg-warehouse/"
+  location_uri = "s3://${local.payments_glue_bucket.bucket}/iceberg-warehouse/"
 }
 
 data "aws_iam_policy_document" "glue_crawler_assume" {
@@ -124,6 +124,7 @@ data "aws_iam_policy_document" "glue_crawler" {
       local.payments_bronze_bucket.arn,
       local.payments_silver_bucket.arn,
       local.payments_gold_bucket.arn,
+      local.payments_glue_bucket.arn,
     ]
   }
 
@@ -149,6 +150,7 @@ data "aws_iam_policy_document" "glue_crawler" {
     resources = [
       "${local.payments_silver_bucket.arn}/*",
       "${local.payments_gold_bucket.arn}/*",
+      "${local.payments_glue_bucket.arn}/*",
     ]
   }
 

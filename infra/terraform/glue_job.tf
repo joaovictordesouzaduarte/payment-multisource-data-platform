@@ -9,7 +9,7 @@ locals {
     pipeline_name = local.pipeline_name
     catalog       = "glue_catalog"
     database      = local.glue_database_name
-    bucket        = local.payments_silver_bucket.bucket
+    bucket        = local.payments_glue_bucket.bucket
   })
   bronze_py = templatefile("${local.pipeline_dir}/transformations/01_bronze.py.tftpl", {
     bronze_path   = "s3://${local.payments_bronze_bucket.bucket}/payments/raw/"
@@ -20,24 +20,31 @@ locals {
 }
 
 resource "aws_s3_object" "pipeline_yaml" {
-  bucket  = local.payments_silver_bucket.id
+  bucket  = local.payments_glue_bucket.id
   key     = "glue/pipelines/payments/spark-pipeline.yml"
   content = local.pipeline_yaml
   etag    = md5(local.pipeline_yaml)
 }
 
 resource "aws_s3_object" "pipeline_bronze" {
-  bucket  = local.payments_silver_bucket.id
+  bucket  = local.payments_glue_bucket.id
   key     = "glue/pipelines/payments/transformations/01_bronze.py"
   content = local.bronze_py
   etag    = md5(local.bronze_py)
 }
 
 resource "aws_s3_object" "pipeline_silver" {
-  bucket = local.payments_silver_bucket.id
+  bucket = local.payments_glue_bucket.id
   key    = "glue/pipelines/payments/transformations/02_silver.py"
   source = "${local.pipeline_dir}/transformations/02_silver.py"
   etag   = filemd5("${local.pipeline_dir}/transformations/02_silver.py")
+}
+
+resource "aws_s3_object" "pipeline_gold" {
+  bucket = local.payments_glue_bucket.id
+  key    = "glue/pipelines/payments/transformations/03_gold.py"
+  source = "${local.pipeline_dir}/transformations/03_gold.py"
+  etag   = filemd5("${local.pipeline_dir}/transformations/03_gold.py")
 }
 
 resource "aws_glue_job" "payments_sdp" {
@@ -53,7 +60,7 @@ resource "aws_glue_job" "payments_sdp" {
   command {
     name            = "glueetl"
     python_version  = "3"
-    script_location = "s3://${local.payments_silver_bucket.bucket}/glue/pipelines/payments/"
+    script_location = "s3://${local.payments_glue_bucket.bucket}/glue/pipelines/payments/"
   }
 
   default_arguments = {
@@ -67,6 +74,7 @@ resource "aws_glue_job" "payments_sdp" {
     aws_s3_object.pipeline_yaml,
     aws_s3_object.pipeline_bronze,
     aws_s3_object.pipeline_silver,
+    aws_s3_object.pipeline_gold,
     aws_iam_role_policy.glue_crawler,
   ]
 }

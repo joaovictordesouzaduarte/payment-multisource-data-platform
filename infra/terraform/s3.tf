@@ -10,6 +10,7 @@ locals {
     bronze = { purpose = "raw-landing-firehose" }
     silver = { purpose = "cleansed-conformed-glue" }
     gold   = { purpose = "business-marts-athena" }
+    glue   = { purpose = "glue-pipelines" }
   }
 }
 
@@ -53,4 +54,5 @@ locals {
   payments_bronze_bucket = aws_s3_bucket.medallion["bronze"]
   payments_silver_bucket = aws_s3_bucket.medallion["silver"]
   payments_gold_bucket   = aws_s3_bucket.medallion["gold"]
+  payments_glue_bucket   = aws_s3_bucket.medallion["glue"]
 }

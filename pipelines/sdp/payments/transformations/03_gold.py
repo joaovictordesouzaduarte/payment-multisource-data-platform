@@ -7,10 +7,11 @@ spark = SparkSession.active()
 
 @dp.temporary_view(comment="Fact payments temporary view")
 def fact_payments_temp() -> DataFrame:
+
     return spark.sql("""
     WITH payments_summary AS (
         select 
-            CONCAT("year", '-', "month", '-', "day") as full_date,
+            CONCAT(year, '-', month, '-', day) as full_date,
             year,
             month,
             day,
@@ -39,12 +40,14 @@ def fact_payments_temp() -> DataFrame:
     
     """)
 
+
 @dp.materialized_view(comment="Fact payments for successful/refunded transactions", partition_cols=["full_date", "country"])
 def fact_payments() -> DataFrame:
     return spark.sql("""
     SELECT * FROM fact_payments_temp
     where status <> 'failed'
     """)
+    
 
 @dp.materialized_view(comment="Fact payments for failed transactions", partition_cols=["full_date", "country"])
 def fact_payments_rejected() -> DataFrame:
